@@ -2,6 +2,7 @@ import optparse
 import os
 import sys
 import math
+import numpy as np
 
 os.environ['SUMO_HOME'] = '/Users/TEEMENGKIAT/sumo'
 
@@ -25,14 +26,13 @@ def calculate_distance(x1, y1, x2, y2):
 
 def predict_collision_time(distance1, speed1, distance2, speed2):
     if speed1 == 0 or speed2 == 0:
-        return float('inf')  # or some other suitable value
+        return float('inf')
     return (distance1 / speed1) - (distance2 / speed2)
 
 def set_vehicle_speed_mode(vehicle_id):
     traci.vehicle.setSpeedMode(vehicle_id, 0)
 
 def calculate_speed_adjustments(vehicles):
-    # Create a dictionary to store vehicle properties
     vehicle_props = {}
     for veh in vehicles:
         pos = traci.vehicle.getPosition(veh)
@@ -41,41 +41,54 @@ def calculate_speed_adjustments(vehicles):
         time_to_junction = distance_to_junction / speed if speed > 0 else float('inf')
         vehicle_props[veh] = {"pos": pos, "speed": speed, "distance_to_junction": distance_to_junction, "time_to_junction": time_to_junction}
 
-    # Sort vehicles by time to junction
-    sorted_vehicles = sorted(vehicle_props, key=lambda x: vehicle_props[x]["time_to_junction"])
+    priorities = {}
+    for veh in vehicle_props:
+        priority = 1 / (vehicle_props[veh]["distance_to_junction"] + 0.1 * vehicle_props[veh]["speed"])
+        priorities[veh] = priority
 
-    # Iterate over sorted vehicles and adjust speeds
+    sorted_vehicles = sorted(priorities, key=priorities.get, reverse=True)
+
+    horizon = 20  # increased prediction horizon
+    dt = 0.01
+    max_speed = 15
+    min_speed = 2  # reduced minimum speed
+    safety_margin = 3  # increased safety margin
+
+    predicted_states = np.zeros((horizon, len(sorted_vehicles), 2))
+
     for i, veh in enumerate(sorted_vehicles):
-        for j in range(i + 1, len(sorted_vehicles)):
-            other_veh = sorted_vehicles[j]
-            if vehicle_props[veh]["speed"] == 0 or vehicle_props[other_veh]["speed"] == 0:
-                continue
-            collision_time = predict_collision_time(vehicle_props[veh]["distance_to_junction"], vehicle_props[veh]["speed"], vehicle_props[other_veh]["distance_to_junction"], vehicle_props[other_veh]["speed"])
-            if abs(collision_time) < 2:  # adjust this value to change the safety margin
-                # Adjust speed of one of the vehicles to avoid collision
-                if vehicle_props[veh]["time_to_junction"] < vehicle_props[other_veh]["time_to_junction"]:
-                    print("slowing down")
-                    traci.vehicle.slowDown(veh, vehicle_props[veh]["speed"] * 0.3, 5)
+        for t in range(horizon):
+            if t == 0:
+                predicted_states[t, i, 0] = vehicle_props[veh]["pos"][0]
+                predicted_states[t, i, 1] = vehicle_props[veh]["speed"]
+            else:
+                predicted_states[t, i, 0] = predicted_states[t-1, i, 0] + dt * predicted_states[t-1, i, 1]
+                predicted_states[t, i, 1] = predicted_states[t-1, i, 1]
+
+    for i, veh in enumerate(sorted_vehicles):
+        for t in range(horizon):
+            if t > 0:
+                for j in range(i):
+                    collision_time = predict_collision_time(predicted_states[t-1, i, 0], predicted_states[t-1, i, 1], predicted_states[t-1, j, 0], predicted_states[t-1, j, 1])
+                    if abs(collision_time) < safety_margin:
+                        new_speed = max(min_speed, predicted_states[t-1, i, 1] - 0.5 * (predicted_states[t-1, i, 1] - predicted_states[t-1, j, 1]))
+                        traci.vehicle.slowDown(veh, new_speed, 5)
+                        break
                 else:
-                    print("slowing down")
-                    traci.vehicle.slowDown(other_veh, vehicle_props[other_veh]["speed"] * 0.3, 5)
+                    traci.vehicle.slowDown(veh, max_speed, 5)
+    return
+
 def run():
     step = 0
     while traci.simulation.getMinExpectedNumber() > 0:
         traci.simulationStep()
-        print(f"Simulation step: {step}")
-
         vehicles = traci.vehicle.getIDList()
-        print(f"Vehicles in simulation: {vehicles}")
         
         for vehicle_id in vehicles:
             set_vehicle_speed_mode(vehicle_id)
         
         if len(vehicles) > 0:
-            print("Successfully run")
             calculate_speed_adjustments(vehicles)
-        else:
-            print("No vehicles in simulation.")
         
         step += 1
 

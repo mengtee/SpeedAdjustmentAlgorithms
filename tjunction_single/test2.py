@@ -2,6 +2,8 @@ import optparse
 import os
 import sys
 import math
+import numpy as np
+from scipy.optimize import minimize
 
 os.environ['SUMO_HOME'] = '/Users/TEEMENGKIAT/sumo'
 
@@ -23,75 +25,73 @@ def get_options():
 def calculate_distance(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-def predict_collision_time(distance1, speed1, distance2, speed2):
-    if speed1 == speed2:
-        return float('inf')
-    return (distance1 / speed1) - (distance2 / speed2)
+def predict_collision_time(vehicle1_pos, vehicle1_speed, vehicle2_pos, vehicle2_speed):
 
+    # Will not collision if two of the vehicle moving in same speed without moving on the collision course 
+    if vehicle1_speed == vehicle2_speed:
+        return float('inf')  # or some other suitable value
+    ttc = (vehicle1_pos - vehicle2_pos) / (vehicle1_speed - vehicle2_speed)
+    return ttc
+
+# Set the vehicle speed mode aside from the default speed adjustment algorithms
 def set_vehicle_speed_mode(vehicle_id):
     traci.vehicle.setSpeedMode(vehicle_id, 0)
 
 def calculate_speed_adjustments(vehicles):
-    print("Calling vehicle from calculate speed adjustment function")
-    print(vehicles)
-    if len(vehicles) < 2:
-        print(len(vehicles))
-        # If there is only one vehicle, restore its normal speed if it has crossed the junction
-        for veh in vehicles:
-            pos = traci.vehicle.getPosition(veh)
-            
-            junction_pos = traci.junction.getPosition("J2")
-            normal_speed = traci.vehicle.getAllowedSpeed(veh)
-            distance_to_junction = calculate_distance(pos[0], pos[1], junction_pos[0], junction_pos[1])
-            
-            traci.vehicle.setSpeed(veh, normal_speed)
-            print(f"This is pos: {pos}, speed: {normal_speed}, for vehicle: {veh}")
-            print(f"Vehicle {veh} has crossed the junction. Restoring normal speed.")
-        return
+    # Create a dictionary to store vehicle properties (position, speed, distance and time to junction)
+    vehicle_props = {}
+    for veh in vehicles:
+        pos = traci.vehicle.getPosition(veh)
+        speed = traci.vehicle.getSpeed(veh)
+        distance_to_junction = calculate_distance(pos[0], pos[1], traci.junction.getPosition("J2")[0], traci.junction.getPosition("J2")[1])
+        time_to_junction = distance_to_junction / speed if speed > 0 else float('inf')
+        vehicle_props[veh] = {"pos": pos, "speed": speed, "distance_to_junction": distance_to_junction, "time_to_junction": time_to_junction}
 
-    # Handle multiple vehicles
-    for i in range(len(vehicles)):
-        for j in range(i + 1, len(vehicles)):
-            veh1 = vehicles[i]
-            veh2 = vehicles[j]
+    # Assign priorities to vehicles based on proximity to junction and speed (Prioritise vehicle that closer to junction)
+    priorities = {}
+    for veh in vehicle_props:
+        # 
+        priority = 1 / (vehicle_props[veh]["distance_to_junction"] + 0.1 * vehicle_props[veh]["speed"])
+        priorities[veh] = priority
 
-            speed1 = traci.vehicle.getSpeed(veh1)
-            speed2 = traci.vehicle.getSpeed(veh2)
+    # Sort vehicles by priority
+    sorted_vehicles = sorted(priorities, key=priorities.get, reverse=True)
 
-            pos1 = traci.vehicle.getPosition(veh1)
-            pos2 = traci.vehicle.getPosition(veh2)
+    # Initialize MPC parameters
+    horizon = 10  # prediction horizon (steps)
+    dt = 1  # time step (seconds)
+    max_speed = 15  # maximum speed (m/s)
+    min_speed = 5  # minimum speed (m/s)
+    safety_margin = 2  # safety margin (seconds)
 
-            junction_pos = traci.junction.getPosition("J2")
+    # Create a matrix to store the predicted states
+    predicted_states = np.zeros((horizon, len(sorted_vehicles), 2))  # [time, vehicle, state (pos, speed)]
 
-            distance_to_junction1 = calculate_distance(pos1[0], pos1[1], junction_pos[0], junction_pos[1])
-            distance_to_junction2 = calculate_distance(pos2[0], pos2[1], junction_pos[0], junction_pos[1])
+    # Iterate over the sorted vehicles and predict their future states
+    for i, veh in enumerate(sorted_vehicles):
+        for t in range(horizon):
 
-            time_to_junction1 = distance_to_junction1 / speed1 if speed1 > 0 else float('inf')
-            time_to_junction2 = distance_to_junction2 / speed2 if speed2 > 0 else float('inf')
-
-            normal_speed1 = traci.vehicle.getAllowedSpeed(veh1)
-            normal_speed2 = traci.vehicle.getAllowedSpeed(veh2)
-
-            collision_time = predict_collision_time(distance_to_junction1, speed1, distance_to_junction2, speed2)
-
-            print(f"Vehicle {veh1}: Speed = {speed1}, Distance to Junction = {distance_to_junction1}, Time to Junction = {time_to_junction1}")
-            print(f"Vehicle {veh2}: Speed = {speed2}, Distance to Junction = {distance_to_junction2}, Time to Junction = {time_to_junction2}")
-            print(f"Predicted Collision Time: {collision_time}")
-
-            safety_margin = 2  # seconds
-            if abs(collision_time) < safety_margin:  # Potential collision detected
-                if time_to_junction1 < time_to_junction2:
-                    print(f"Gradually slowing down vehicle {veh2}")
-                    traci.vehicle.slowDown(veh2, speed2 * 0.3, 5)  # Slow down veh2 gradually
-                    traci.vehicle.setSpeed(veh1, normal_speed1)  # Ensure veh1 speed is set to normal
-                else:
-                    print(f"Gradually slowing down vehicle {veh1}")
-                    traci.vehicle.slowDown(veh1, speed1 * 0.3, 5)  # Slow down veh1 gradually
-                    traci.vehicle.setSpeed(veh2, normal_speed2)  # Ensure veh2 speed is set to normal
+            # Predicting the state (next pos= current pos + (time step * speed))
+            if t == 0:
+                predicted_states[t, i, 0] = vehicle_props[veh]["pos"][0]
+                predicted_states[t, i, 1] = vehicle_props[veh]["speed"]
             else:
-                print(f"No potential collision detected. Setting normal speeds.")
-                traci.vehicle.setSpeed(veh1, normal_speed1)  # Ensure veh1 speed is set to normal
-                traci.vehicle.setSpeed(veh2, normal_speed2)  # Ensure veh2 speed is set to normal
+                predicted_states[t, i, 0] = predicted_states[t-1, i, 0] + dt * predicted_states[t-1, i, 1]
+                predicted_states[t, i, 1] = predicted_states[t-1, i, 1]
+
+    # Optimize the speed adjustments using MPC
+    for i, veh in enumerate(sorted_vehicles):
+        for t in range(horizon):
+            if t > 0:
+                # Calculate the predicted collision time with the previous vehicle
+                collision_time = predict_collision_time(predicted_states[t-1, i, 0], predicted_states[t-1, i, 1], predicted_states[t-1, i-1, 0], predicted_states[t-1, i-1, 1])
+                if abs(collision_time) < safety_margin:
+                    # Adjust the speed of the current vehicle to avoid collision
+                    new_speed = max(min_speed, predicted_states[t-1, i, 1] - 0.5 * (predicted_states[t-1, i, 1] - predicted_states[t-1, i-1, 1]))
+                    print('Slowing down')
+                    traci.vehicle.slowDown(veh, new_speed, 5)
+
+    return
 
 def run():
     step = 0
@@ -124,5 +124,5 @@ if __name__ == "__main__":
     else:
         sumoBinary = checkBinary("sumo-gui")
 
-    traci.start([sumoBinary, '-c', 'final_tjunction.sumocfg', "--tripinfo-output", "tripinfor.xml"])
+    traci.start([sumoBinary, '-c','multiple_vehicles_tjunction.sumocfg', "--tripinfo-output", "tripinfor.xml"])
     run()
