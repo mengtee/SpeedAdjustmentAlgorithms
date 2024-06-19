@@ -6,7 +6,7 @@
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="roundabout_test.net.xml"/>
+        <net-file value="roundabout.net.xml"/>
         <route-files value="roundabout_demand.rou.xml"/>
     </input>
 

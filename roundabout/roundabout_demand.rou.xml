@@ -4,15 +4,15 @@
     <vType id="car" accel="2.6" decel="4.5" sigma="0.5" length="5.0" minGap="2.5" maxSpeed="30"/>
 
     <route id="route_1" edges="E0 E4 E30"/>
-    <route id="route_2" edges="E0 E4 E6 E10"/>
-    <route id="route_3" edges="-E3 E6 E7 E2.23"/>
-    <route id="route_4" edges="-E1 E7 E3 E4 E30"/>
-    <route id="route_5" edges="-E2 E3 -E0.26"/>
+    <route id="route_2" edges="E0 E4 E5 E1.20"/>
+    <route id="route_3" edges="-E3 E5 E6 -E20"/>
+    <route id="route_4" edges="-E1 E6 E3 E4 E30"/>
+    <route id="route_5" edges="E2 E3 E4 E30"/>
 
-    <flow id="flow_1" type="car" begin="0" end="1000" number="10" route="route_1"/>
-    <flow id="flow_2" type="car" begin="0" end="1000" number="10" route="route_2"/>
-    <flow id="flow_3" type="car" begin="0" end="1000" number="10" route="route_3"/>
-    <flow id="flow_4" type="car" begin="0" end="1000" number="10" route="route_4"/>
-    <flow id="flow_5" type="car" begin="0" end="1000" number="10" route="route_5"/>
+    <flow id="flow_1" type="car" begin="0" end="100" number="100" route="route_1"/>
+    <flow id="flow_2" type="car" begin="0" end="100" number="100" route="route_2"/>
+    <flow id="flow_3" type="car" begin="0" end="100" number="100" route="route_3"/>
+    <flow id="flow_4" type="car" begin="0" end="100" number="100" route="route_4"/>
+    <flow id="flow_5" type="car" begin="0" end="100" number="100" route="route_5"/>
 
 </routes>
