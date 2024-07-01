@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- generated on 2024-05-10 18:15:25 by Eclipse SUMO netedit Version 1.19.0 -->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <!-- VTypes -->
+    <vType id="car" length="4.00" minGap="2.50" maxSpeed="70.00" accel="2.6" decel="4.5" sigma="0.5"/>
+    <!-- Routes -->
+    <route id="route1" edges="E0 E1"/>
+    <route id="route2" edges="E2 E1"/>
+    <!-- Vehicles, persons and containers (sorted by depart) -->
+    <vehicle id="vehicle1" type="car" depart="0.00" route="route1"/>
+    <vehicle id="vehicle2" type="car" depart="0.00" route="route2"/>
+    <vehicle id="vehicle3" type="car" depart="2.00" route="route1"/>
+    <vehicle id="vehicle4" type="car" depart="2.00" route="route2"/>
+    <vehicle id="vehicle5" type="car" depart="4.00" route="route1"/>
+    <vehicle id="vehicle6" type="car" depart="4.00" route="route2"/>
+    <vehicle id="vehicle7" type="car" depart="6.00" route="route1"/>
+    <vehicle id="vehicle8" type="car" depart="6.00" route="route2"/>
+    <vehicle id="vehicle9" type="car" depart="8.00" route="route1"/>
+    <vehicle id="vehicle10" type="car" depart="8.00" route="route2"/>
+    <vehicle id="vehicle11" type="car" depart="10.00" route="route1"/>
+    <vehicle id="vehicle12" type="car" depart="10.00" route="route2"/>
+    <vehicle id="vehicle13" type="car" depart="12.00" route="route1"/>
+    <vehicle id="vehicle14" type="car" depart="12.00" route="route2"/>
+    <vehicle id="vehicle15" type="car" depart="14.00" route="route1"/>
+    <vehicle id="vehicle16" type="car" depart="14.00" route="route2"/>
+    <vehicle id="vehicle17" type="car" depart="16.00" route="route1"/>
+    <vehicle id="vehicle18" type="car" depart="16.00" route="route2"/>
+    <vehicle id="vehicle19" type="car" depart="18.00" route="route1"/>
+    <vehicle id="vehicle20" type="car" depart="18.00" route="route2"/>
+</routes>
