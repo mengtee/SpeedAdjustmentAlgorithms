@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <!-- VTypes -->
+    <vType id="car" length="4.00" minGap="2.50" maxSpeed="70.00" accel="2.6" decel="4.5" sigma="0.5"/>
+    <!-- Routes -->
+    <route id="route1" edges="E3 -E4"/>
+    <route id="route2" edges="E4 -E3"/>
+    <route id="route3" edges="-E6 -E5"/>
+    <route id="route4" edges="E5 E6"/>
+
+    <!-- Turning routes-->
+    <route id="route5" edges="E3 E6"/>
+    <route id="route6" edges="-E6 -E4"/>
+    <route id="route7" edges="E4 -E5"/>
+    <route id="route8" edges="E5 -E3"/>
+
+    <route id="route9" edges="E3 -E5"/>
+    <route id="route10" edges="-E6 -E3"/>
+    <route id="route11" edges="E4 E6"/>
+    <route id="route12" edges="E5 -E4"/>
+
+    <!-- Vehicles, persons and containers (sorted by depart) -->
+    <vehicle id="vehicle1" type="car" depart="1" route="route1" departLane="0"/>
+    <vehicle id="vehicle2" type="car" depart="1" route="route2" departLane="0"/>
+    <vehicle id="vehicle3" type="car" depart="2" route="route3" departLane="0"/>
+    <vehicle id="vehicle4" type="car" depart="2" route="route4" departLane="0"/>
+    <vehicle id="vehicle5" type="car" depart="3" route="route5" departLane="0"/>
+    <vehicle id="vehicle6" type="car" depart="3" route="route6" departLane="0"/>
+    <vehicle id="vehicle7" type="car" depart="4" route="route7" departLane="0"/>
+    <vehicle id="vehicle8" type="car" depart="4" route="route8" departLane="0"/>
+    <vehicle id="vehicle9" type="car" depart="5" route="route9" departLane="0"/>
+    <vehicle id="vehicle10" type="car" depart="5" route="route10" departLane="0"/>
+    <vehicle id="vehicle11" type="car" depart="6" route="route11" departLane="0"/>
+    <vehicle id="vehicle12" type="car" depart="6" route="route12" departLane="0"/>
+    <vehicle id="vehicle13" type="car" depart="7" route="route1" departLane="0"/>
+    <vehicle id="vehicle14" type="car" depart="7" route="route2" departLane="0"/>
+    <vehicle id="vehicle15" type="car" depart="8" route="route3" departLane="0"/>
+    <vehicle id="vehicle16" type="car" depart="8" route="route4" departLane="0"/>
+    <vehicle id="vehicle17" type="car" depart="9" route="route5" departLane="0"/>
+    <vehicle id="vehicle18" type="car" depart="9" route="route6" departLane="0"/>
+    <vehicle id="vehicle19" type="car" depart="10" route="route7" departLane="0"/>
+    <vehicle id="vehicle20" type="car" depart="10" route="route8" departLane="0"/>
+    <vehicle id="vehicle21" type="car" depart="11" route="route9" departLane="0"/>
+    <vehicle id="vehicle22" type="car" depart="11" route="route10" departLane="0"/>
+    <vehicle id="vehicle23" type="car" depart="12" route="route11" departLane="0"/>
+    <vehicle id="vehicle24" type="car" depart="12" route="route12" departLane="0"/>
+    <vehicle id="vehicle25" type="car" depart="13" route="route1" departLane="0"/>
+    <vehicle id="vehicle26" type="car" depart="13" route="route2" departLane="0"/>
+    <vehicle id="vehicle27" type="car" depart="14" route="route3" departLane="0"/>
+    <vehicle id="vehicle28" type="car" depart="14" route="route4" departLane="0"/>
+    <vehicle id="vehicle29" type="car" depart="15" route="route5" departLane="0"/>
+    <vehicle id="vehicle30" type="car" depart="15" route="route6" departLane="0"/>
+    <vehicle id="vehicle31" type="car" depart="16" route="route7" departLane="0"/>
+    <vehicle id="vehicle32" type="car" depart="16" route="route8" departLane="0"/>
+    <vehicle id="vehicle33" type="car" depart="17" route="route9" departLane="0"/>
+    <vehicle id="vehicle34" type="car" depart="17" route="route10" departLane="0"/>
+    <vehicle id="vehicle35" type="car" depart="18" route="route11" departLane="0"/>
+    <vehicle id="vehicle36" type="car" depart="18" route="route12" departLane="0"/>
+    <vehicle id="vehicle37" type="car" depart="19" route="route1" departLane="0"/>
+    <vehicle id="vehicle38" type="car" depart="19" route="route2" departLane="0"/>
+    <vehicle id="vehicle39" type="car" depart="20" route="route3" departLane="0"/>
+    <vehicle id="vehicle40" type="car" depart="20" route="route4" departLane="0"/>
+</routes>

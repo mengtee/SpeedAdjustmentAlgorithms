@@ -1,9 +1,10 @@
+'''Report test case 1: 
+1. Centralised algorithms for T junction (Simple MPC methods)'''
 import optparse
 import os
 import sys
 import math
 import numpy as np
-from scipy.optimize import minimize
 
 os.environ['SUMO_HOME'] = '/Users/TEEMENGKIAT/sumo'
 
@@ -25,20 +26,16 @@ def get_options():
 def calculate_distance(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-def predict_collision_time(vehicle1_pos, vehicle1_speed, vehicle2_pos, vehicle2_speed):
-
-    # Will not collision if two of the vehicle moving in same speed without moving on the collision course 
-    if vehicle1_speed == vehicle2_speed:
+def predict_collision_time(distance1, speed1, distance2, speed2):
+    if speed1 == 0 or speed2 == 0:
         return float('inf')  # or some other suitable value
-    ttc = (vehicle1_pos - vehicle2_pos) / (vehicle1_speed - vehicle2_speed)
-    return ttc
+    return (distance1 / speed1) - (distance2 / speed2)
 
-# Set the vehicle speed mode aside from the default speed adjustment algorithms
 def set_vehicle_speed_mode(vehicle_id):
     traci.vehicle.setSpeedMode(vehicle_id, 0)
 
 def calculate_speed_adjustments(vehicles):
-    # Create a dictionary to store vehicle properties (position, speed, distance and time to junction)
+    # Create a dictionary to store vehicle properties
     vehicle_props = {}
     for veh in vehicles:
         pos = traci.vehicle.getPosition(veh)
@@ -47,10 +44,9 @@ def calculate_speed_adjustments(vehicles):
         time_to_junction = distance_to_junction / speed if speed > 0 else float('inf')
         vehicle_props[veh] = {"pos": pos, "speed": speed, "distance_to_junction": distance_to_junction, "time_to_junction": time_to_junction}
 
-    # Assign priorities to vehicles based on proximity to junction and speed (Prioritise vehicle that closer to junction)
+    # Assign priorities to vehicles based on proximity to junction and speed
     priorities = {}
     for veh in vehicle_props:
-        # 
         priority = 1 / (vehicle_props[veh]["distance_to_junction"] + 0.1 * vehicle_props[veh]["speed"])
         priorities[veh] = priority
 
@@ -70,8 +66,6 @@ def calculate_speed_adjustments(vehicles):
     # Iterate over the sorted vehicles and predict their future states
     for i, veh in enumerate(sorted_vehicles):
         for t in range(horizon):
-
-            # Predicting the state (next pos= current pos + (time step * speed))
             if t == 0:
                 predicted_states[t, i, 0] = vehicle_props[veh]["pos"][0]
                 predicted_states[t, i, 1] = vehicle_props[veh]["speed"]
@@ -123,6 +117,7 @@ if __name__ == "__main__":
         sumoBinary = checkBinary("sumo")
     else:
         sumoBinary = checkBinary("sumo-gui")
+    #traci.start([sumoBinary, '-c', 'final_tjunction.sumocfg', "--tripinfo-output", "tripinfor.xml"])
 
     traci.start([sumoBinary, '-c','multiple_vehicles_tjunction.sumocfg', "--tripinfo-output", "tripinfor.xml"])
     run()

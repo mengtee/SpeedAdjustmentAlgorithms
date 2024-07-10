@@ -1,3 +1,4 @@
+'''Board cast and received vehicles position function'''
 import optparse
 import os
 import sys
@@ -154,8 +155,5 @@ if __name__ == "__main__":
     else:
         sumoBinary = checkBinary("sumo-gui")
 
-    traci.start([sumoBinary, '-c', 'tjunction_02.sumocfg', "--tripinfo-output", "tripinfor.xml"])
+    traci.start([sumoBinary, '-c', 'tjunction_03.sumocfg', "--tripinfo-output", "tripinfor.xml"])
     run()
-
-'''Performance
-tjunction_02: 9 collision vehicles, with 47 steps'''

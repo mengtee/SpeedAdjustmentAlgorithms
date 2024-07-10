@@ -22,11 +22,7 @@ def get_options():
     return options
 
 def calculate_distance(x1, y1, x2, y2):
-    """Calculate Euclidean distance between two points in 2D."""
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-
-def set_vehicle_speed_mode(vehicle_id):
-    traci.vehicle.setSpeedMode(vehicle_id, 0)
 
 def predict_collision_time_2d(pos1, speed1, pos2, speed2):
     """
@@ -39,39 +35,34 @@ def predict_collision_time_2d(pos1, speed1, pos2, speed2):
     Returns:
     Time to collision if the vehicles are on a collision course, otherwise float('inf').
     """
-    rel_pos = (pos2[0] - pos1[0], pos2[1] - pos1[1])
-    rel_speed = (speed2[0] - speed1[0], speed2[1] - speed1[1])
+    rel_pos_x = pos2[0] - pos1[0]
+    rel_pos_y = pos2[1] - pos1[1]
+    rel_speed_x = speed2[0] - speed1[0]
+    rel_speed_y = speed2[1] - speed1[1]
+
+    print(f"Relative Position X: {rel_pos_x}, Relative Position Y: {rel_pos_y}")
+    print(f"Relative Speed X: {rel_speed_x}, Relative Speed Y: {rel_speed_y}")
     
-    print(f"Relative Position: {rel_pos}, Relative Speed: {rel_speed}")
-    
-    a = rel_speed[0]**2 + rel_speed[1]**2
-    b = 2 * (rel_pos[0] * rel_speed[0] + rel_pos[1] * rel_speed[1])
-    c = rel_pos[0]**2 + rel_pos[1]**2
-    
-    print(f"a: {a}, b: {b}, c: {c}")
-    
-    if a == 0:  # No relative motion
+    if rel_speed_x == 0 and rel_speed_y == 0:
+        print("No relative motion")
         return float('inf')
     
-    discriminant = b**2 - 4*a*c
-    print(f"Discriminant: {discriminant}")
-    if discriminant < 0:  # No real roots, no collision
-        return float('inf')
-    
-    sqrt_discriminant = math.sqrt(discriminant)
-    t1 = (-b - sqrt_discriminant) / (2 * a)
-    t2 = (-b + sqrt_discriminant) / (2 * a)
-    
-    print(f"t1: {t1}, t2: {t2}")
-    
-    if t1 > 0 and t2 > 0:
-        return min(t1, t2)
-    elif t1 > 0:
-        return t1
-    elif t2 > 0:
-        return t2
-    else:
-        return float('inf')  # Both times are negative, no future collision
+    # Calculate time to collision for x and y coordinates
+    t_x = float('inf') if rel_speed_x == 0 else rel_pos_x / rel_speed_x
+    t_y = float('inf') if rel_speed_y == 0 else rel_pos_y / rel_speed_y
+
+    print(f"Initial t_x: {t_x}, Initial t_y: {t_y}")
+
+    # Check if both times are positive and nearly equal
+    if t_x >= 0 and t_y >= 0:  # Allow a small threshold for collision prediction
+        print("Collision detected")
+        return min(t_x, t_y)
+
+    print("No collision detected")
+    return float('inf')
+
+def set_vehicle_speed_mode(vehicle_id):
+    traci.vehicle.setSpeedMode(vehicle_id, 0)
 
 def calculate_speed_adjustments(vehicles, horizon, dt, max_speed, min_speed, safety_margin):
     """Calculate necessary speed adjustments to avoid collisions at the junction."""
@@ -79,10 +70,11 @@ def calculate_speed_adjustments(vehicles, horizon, dt, max_speed, min_speed, saf
     for veh in vehicles:
         pos = traci.vehicle.getPosition(veh)
         speed = traci.vehicle.getSpeed(veh)
-        angle = traci.vehicle.getAngle(veh) * math.pi / 180.0  # Convert to radians
-        speed_x = speed * math.cos(angle)
-        speed_y = speed * math.sin(angle)
-        print(f'Vehicles {veh}, speedx {speed_x}, speedy {speed_y}, pos {pos}')
+        angle = traci.vehicle.getAngle(veh)  # Angle in degrees
+        angle_rad = (90 - angle) * math.pi / 180.0  # Convert to radians and adjust for standard trig orientation
+        speed_x = speed * math.cos(angle_rad)
+        speed_y = speed * math.sin(angle_rad)
+        print(f'Vehicle {veh}, pos {pos}, angle (degrees) {angle}, speed {speed}, speed_x {speed_x}, speed_y {speed_y}')
         distance_to_junction = calculate_distance(pos[0], pos[1], traci.junction.getPosition("J2")[0], traci.junction.getPosition("J2")[1])
         vehicle_props[veh] = {"pos": pos, "speed": (speed_x, speed_y), "distance_to_junction": distance_to_junction}
 
@@ -118,7 +110,7 @@ def calculate_speed_adjustments(vehicles, horizon, dt, max_speed, min_speed, saf
                     (predicted_states[t-1, j, 2], predicted_states[t-1, j, 3])
                 )
                 print(f"Collision time: {collision_time}")
-                if abs(collision_time) < safety_margin:
+                if collision_time < safety_margin and collision_time >= 0:
                     new_speed_x = max(min_speed, predicted_states[t-1, i, 2] - 
                                       0.5 * (predicted_states[t-1, i, 2] - predicted_states[t-1, j, 2]))
                     new_speed_y = max(min_speed, predicted_states[t-1, i, 3] - 
@@ -126,7 +118,6 @@ def calculate_speed_adjustments(vehicles, horizon, dt, max_speed, min_speed, saf
                     new_speed = math.sqrt(new_speed_x**2 + new_speed_y**2)
                     traci.vehicle.slowDown(veh_i, new_speed, int(dt * 1000))
                     print(f"Collision detected: Vehicle {veh_i} adjusted speed to avoid Vehicle {veh_j}")
-                    collision_detected = True
                     break
             else:
                 # No collision detected, ensure max speed
@@ -168,5 +159,5 @@ if __name__ == "__main__":
     else:
         sumoBinary = checkBinary("sumo-gui")
 
-    traci.start([sumoBinary, '-c', 'tjunction_03.sumocfg', "--tripinfo-output", "tripinfo.xml"])
+    traci.start([sumoBinary, '-c', 'tjunction_03.sumocfg', "--tripinfo-output", "tripinfor.xml"])
     run()

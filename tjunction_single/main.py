@@ -1,3 +1,7 @@
+'''Similar to the traditional speed adjustment algorithms: focus on real time 
+adjustment, did not consider the future state of the vehicles, this is not 
+achieving the rule of inter vehicles communication'''
+
 import optparse
 import os
 import sys
@@ -24,9 +28,8 @@ def get_options():
 def calculate_distance(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-# Prediction on collision time
 def predict_collision_time(distance1, speed1, distance2, speed2):
-    if speed1 == speed2:
+    if speed1 == 0 or speed2 == 0:
         return float('inf')
     return (distance1 / speed1) - (distance2 / speed2)
 
@@ -36,18 +39,20 @@ def set_vehicle_speed_mode(vehicle_id):
 
 # Speed adjustment algorithms
 def calculate_speed_adjustments(vehicles):
+
+    # Loop through all the vehicles and get their respective information
     for veh in vehicles:
         pos = traci.vehicle.getPosition(veh)
         speed = traci.vehicle.getSpeed(veh)
         normal_speed = traci.vehicle.getAllowedSpeed(veh)
 
-        # Check if there are other vehicles within a certain distance
+        # Check if there are other vehicles within a 50m distance
         nearby_vehicles = []
         for other_veh in vehicles:
             if other_veh!= veh:
                 other_pos = traci.vehicle.getPosition(other_veh)
                 distance = calculate_distance(pos[0], pos[1], other_pos[0], other_pos[1])
-                if distance < 50:  # adjust this value to change the detection range
+                if distance < 100:  # adjust this value to change the detection range
                     nearby_vehicles.append(other_veh)
 
         if len(nearby_vehicles) > 0:
@@ -77,8 +82,8 @@ def calculate_speed_adjustments(vehicles):
             # If no nearby vehicles, set speed to normal
             traci.vehicle.setSpeed(veh, normal_speed)
             print(f"No nearby vehicles for {veh}. Setting normal speed.")
-            
-                                        
+
+
 def run():
     step = 0
     while traci.simulation.getMinExpectedNumber() > 0:
@@ -88,14 +93,22 @@ def run():
         vehicles = traci.vehicle.getIDList()
         print(f"Vehicles in simulation: {vehicles}")
         
+        print(f"Step: {step}:")
         for vehicle_id in vehicles:
             set_vehicle_speed_mode(vehicle_id)
         
         if len(vehicles) > 0:
             print("Successfully run")
             calculate_speed_adjustments(vehicles)
+          
         else:
             print("No vehicles in simulation.")
+
+        # Print out the speed of each vehicle
+        print(f"Step {step}:")
+        for vehicle_id in vehicles:
+            speed = traci.vehicle.getSpeed(vehicle_id)
+            print(f"Vehicle {vehicle_id}: Speed {speed:.2f} m/s")
         
         step += 1
 
@@ -110,5 +123,5 @@ if __name__ == "__main__":
     else:
         sumoBinary = checkBinary("sumo-gui")
 
-    traci.start([sumoBinary, '-c', 'final_tjunction.sumocfg', "--tripinfo-output", "tripinfor.xml"])
+    traci.start([sumoBinary, '-c', 'multiple_vehicles_tjunction.sumocfg', "--tripinfo-output", "tripinfor.xml"])
     run()
