@@ -7,7 +7,14 @@
     <route id="route2" edges="E2 E1" color="0,0,1"/>
     <!-- Vehicles, persons and containers (sorted by depart) -->
     <vehicle id="vehicle1" type="car" depart="0" route="route1" departLane="0"/>
-    <vehicle id="vehicle2" type="car" depart="1" route="route2" departLane="0"/>
-    <vehicle id="vehicle3" type="car" depart="2" route="route1" departLane="0"/>
-    <vehicle id="vehicle4" type="car" depart="3" route="route2" departLane="0"/>
+    <vehicle id="vehicle2" type="car" depart="0" route="route1" departLane="1"/>
+
+    <vehicle id="vehicle3" type="car" depart="1" route="route2" departLane="0"/>
+    <vehicle id="vehicle4" type="car" depart="1" route="route2" departLane="1"/>
+
+    <vehicle id="vehicle5" type="car" depart="2" route="route1" departLane="0"/>
+    <vehicle id="vehicle6" type="car" depart="2" route="route1" departLane="1"/>
+
+    <vehicle id="vehicle7" type="car" depart="3" route="route2" departLane="0"/>
+    <vehicle id="vehicle8" type="car" depart="3" route="route2" departLane="1"/>
 </routes>

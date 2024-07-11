@@ -35,6 +35,15 @@ def calculate_time_to_junction(pos, speed_x, speed_y, junction_pos):
     return distance_to_junction / speed_magnitude
 
 def predict_collision_elliptical(pos1, speed1, pos2, speed2, vehicle_length, vehicle_width):
+    SMALL_VALUE_THRESHOLD = 1e-3
+    speed1 = [0 if abs(s) < SMALL_VALUE_THRESHOLD else s for s in speed1]
+    speed2 = [0 if abs(s) < SMALL_VALUE_THRESHOLD else s for s in speed2]
+
+    # Ignore collision prediction if either vehicle is stationary
+    if all(s == 0 for s in speed1) or all(s == 0 for s in speed2):
+        print(f'Vehicle stationary')
+        return float('inf')
+    
     rel_pos_x = pos2[0] - pos1[0]
     rel_pos_y = pos2[1] - pos1[1]
     rel_speed_x = speed2[0] - speed1[0]
@@ -45,13 +54,11 @@ def predict_collision_elliptical(pos1, speed1, pos2, speed2, vehicle_length, veh
 
     distance_squared = (rel_pos_x**2 / a**2) + (rel_pos_y**2 / b**2)
     speed_magnitude_squared = rel_speed_x**2 + rel_speed_y**2
-
-    # SMALL_VALUE_THRESHOLD = 1e-3
-    # speed1 = [0 if abs(s) < SMALL_VALUE_THRESHOLD else s for s in speed1]
-    # speed2 = [0 if abs(s) < SMALL_VALUE_THRESHOLD else s for s in speed2]
-
+    
     # Check if vehicles are moving in the same direction
     same_direction = (speed1[0] * speed2[0] > 0) or (speed1[1] * speed2[1] > 0)
+
+    # same_direction = False
 
     if same_direction:
         print("Same direction")
@@ -124,7 +131,7 @@ def calculate_speed_adjustments(vehicle_id, horizon, dt, max_speed, min_speed, s
     time_to_junction = calculate_time_to_junction(pos, speed_x, speed_y, junction_pos)
 
     # Broadcast and store the information locally, including time to junction
-    predicted_states = broadcast_future_states(vehicle_id, pos, speed_x, speed_y, time_to_junction, horizon, dt)
+    predicted_states = broadcast_future_states(vehicle_id, pos, speed_x, speed_y, time_to_junction, horizon, dt, junction_pos)
 
     vehicles = traci.vehicle.getIDList()
     nearest_collision_time = float('inf')
@@ -134,9 +141,10 @@ def calculate_speed_adjustments(vehicle_id, horizon, dt, max_speed, min_speed, s
     # print(f'This is the vehicle {vehicle_id} with the lane {lane_id}')
     vehicle_has_passed_junction = has_passed_junction(pos, junction_pos, lane_id)
 
-    print(f'-------------------------------{vehicle_id}-------------------------------')
-    print(f'Current state of vehicle {vehicle_id}, pos: {pos}, speed: {speed}')
-    print(f'Predicted state of vehicle {predicted_states}')
+    if vehicle_id in ("vehicle3", "vehicle4", "vehicle5", "vehicle6"):
+        print(f'-------------------------------{vehicle_id}-------------------------------')
+        print(f'Current state of vehicle {vehicle_id}, pos: {pos}, speed: {speed}')
+        print(f'Predicted state of vehicle {predicted_states}')
 
     for t in range(1, horizon):
         for other_vehicle in vehicles: 
@@ -146,6 +154,10 @@ def calculate_speed_adjustments(vehicle_id, horizon, dt, max_speed, min_speed, s
             other_predicted_states, other_time_to_junction = receive_predicted_states(other_vehicle)
             if other_predicted_states is None:
                 continue
+
+            if other_vehicle == "vehicle5" and vehicle_id == 'vehicle3':
+                print(f'This is other vehicle predicted states {other_vehicle}')
+                print(other_predicted_states)
 
             other_length = traci.vehicle.getLength(other_vehicle)
             other_width = traci.vehicle.getWidth(other_vehicle)
@@ -170,8 +182,9 @@ def calculate_speed_adjustments(vehicle_id, horizon, dt, max_speed, min_speed, s
                     # Recalculate and broadcast future states after slowing down
                     speed_x = nearest_collision_speed * math.cos(angle_rad)
                     speed_y = nearest_collision_speed * math.sin(angle_rad)
-                    predicted_states = broadcast_future_states(vehicle_id, pos, speed_x, speed_y, time_to_junction, horizon, dt)
-                    print(f'Updated states for {vehicle_id}: {predicted_states}')     
+                    predicted_states = broadcast_future_states(vehicle_id, pos, speed_x, speed_y, time_to_junction, horizon, dt, junction_pos)
+                    if vehicle_id in ("vehicle3", "vehicle4", "vehicle5", "vehicle6"):
+                        print(f'Updated states for {vehicle_id}: {predicted_states}') 
 
             elif not vehicle_has_passed_junction and time_to_junction == other_time_to_junction:
                 # If both vehicles reach the junction at the same time, use vehicle ID to break tie
@@ -194,7 +207,7 @@ def calculate_speed_adjustments(vehicle_id, horizon, dt, max_speed, min_speed, s
                         # Recalculate and broadcast future states after slowing down
                         speed_x = nearest_collision_speed * math.cos(angle_rad)
                         speed_y = nearest_collision_speed * math.sin(angle_rad)
-                        predicted_states = broadcast_future_states(vehicle_id, pos, speed_x, speed_y, time_to_junction, horizon, dt)
+                        predicted_states = broadcast_future_states(vehicle_id, pos, speed_x, speed_y, time_to_junction, horizon, dt, junction_pos)
 
     if nearest_collision_time < float('inf'):
         traci.vehicle.setSpeed(vehicle_id, nearest_collision_speed)
@@ -207,7 +220,7 @@ def calculate_speed_adjustments(vehicle_id, horizon, dt, max_speed, min_speed, s
     print(f'----------------------------------------------------------------------------')
 
 
-def broadcast_future_states(vehicle_id, pos, speed_x, speed_y, time_to_junction, horizon, dt):
+def broadcast_future_states(vehicle_id, pos, speed_x, speed_y, time_to_junction, horizon, dt, junction_pos):
     predicted_states = np.zeros((horizon, 5))  # Added an extra column for time to junction
     predicted_states[0, :] = [pos[0], pos[1], speed_x, speed_y, time_to_junction]
 
@@ -216,7 +229,12 @@ def broadcast_future_states(vehicle_id, pos, speed_x, speed_y, time_to_junction,
         predicted_states[t, 1] = predicted_states[t-1, 1] + predicted_states[t-1, 3] * dt
         predicted_states[t, 2] = predicted_states[t-1, 2]
         predicted_states[t, 3] = predicted_states[t-1, 3]
-        predicted_states[t, 4] = float('inf') if speed_x == 0 and speed_y == 0 else time_to_junction
+        # Calculate time to junction for the new position and speed
+        pos_t = (predicted_states[t, 0], predicted_states[t, 1])
+        speed_t_x = predicted_states[t, 2]
+        speed_t_y = predicted_states[t, 3]
+        predicted_states[t, 4] = calculate_time_to_junction(pos_t, speed_t_x, speed_t_y, junction_pos)
+
 
     # Store the predicted states for the vehicles
     traci.vehicle.setParameter(vehicle_id, "predictedStates", str(predicted_states.tolist()))
@@ -228,8 +246,8 @@ def receive_predicted_states(other_vehicle):
         if states_str:
             states_str = states_str.replace('inf', 'float("inf")')
             predicted_states = np.array(eval(states_str))
-            distance_to_junction = predicted_states[0, 4]  # Extract the distance to junction
-            return predicted_states, distance_to_junction
+            time_to_junction = predicted_states[0, 4]  # Extract the distance to junction
+            return predicted_states, time_to_junction
     except Exception as e:
         print(f'Error parsing predicted states for vehicle {other_vehicle}: {e}')
     return None, None
@@ -256,6 +274,8 @@ def run():
     junction_pos = traci.junction.getPosition("J2")  
     while traci.simulation.getMinExpectedNumber() > 0:
         traci.simulationStep()
+        print(f"Simulation time{traci.simulation.getTime()}")  # Returns the current simulation time in seconds
+
         vehicles = traci.vehicle.getIDList()
 
         print(f'==================== This is the number of step {step} =====================')
@@ -278,5 +298,5 @@ if __name__ == "__main__":
     else:
         sumoBinary = checkBinary("sumo-gui")
 
-    traci.start([sumoBinary, '-c', 'tjunction_02.sumocfg', "--tripinfo-output", "tripinfo.xml"])
+    traci.start([sumoBinary, '-c', 'tjunction_03.sumocfg', "--tripinfo-output", "tripinfo.xml"])
     run()
