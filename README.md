@@ -54,3 +54,4 @@ python main.py
 ### Step 4: Visualize the Simulation 
 
 To run the simulation, click the play button on the top left of the simulation GUI.
+Increase the time of delay(ms) if the simulation is too fast.
